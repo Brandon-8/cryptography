@@ -1,7 +1,7 @@
 # basic shift cipher function to encrypt, decrpyt given a shift value, and decrypt when the shift value is unknown
 # Note: uppercase is not perserved
 from keyspace import Standard
-from util import check_word
+from util import check_word, calc_char_frequency
 
 def shift_encrypt(plaintext, key=3, space=Standard):
     """
@@ -55,7 +55,61 @@ def shift_decrypt(ciphertext, key=3, space=Standard):
         plaintext += space[(idx - key) % length]
     return plaintext
 
-def shift_crack(ciphertext, space=Standard):
+def shift_crack_brute_force(ciphertext, space, valid_percent):
+    possible_decrpyt = [] # may be possible to get more than one potential plaintext
+    length = len(space)
+    # Brute Force by checking every possible shift value
+    for ii in range(length):
+        poss = shift_decrypt(ciphertext, key=ii, space=space)
+
+        if poss == None:
+            return None
+        
+        # check if the decrypted text is english
+        if check_word(poss, valid_percent=valid_percent):
+            possible_decrpyt.append({'Plaintext': poss, 'Shift Value': ii})
+    
+    return possible_decrpyt
+
+def shift_crack_frequency(ciphertext, space, valid_percent):
+    # Note: This will only work for long messages. Message must contain the letter 'e'
+    def _check_word(letter):
+        shift = space.index(letter) - space.index('e')
+        poss = shift_decrypt(ciphertext, key=shift, space=space)
+            
+        # check if the decrypted text is english
+        if check_word(poss, valid_percent=valid_percent):
+            return {'Plaintext': poss, 'Shift Value': shift}
+        return None
+    
+    freq = calc_char_frequency(ciphertext)
+    max_freq = 0
+    possible_decrpyt = []
+    for i, key in enumerate(freq.keys()):
+        if i == 0: # most frequent letter
+            max_freq = freq[key]
+            res = _check_word(key)
+            if res != None:
+                possible_decrpyt.append(res)
+
+        elif freq[key] == max_freq: # letters tied with same highest frequency
+            res = _check_word(key)
+            if res != None:
+                possible_decrpyt.append(res)
+
+        elif len(possible_decrpyt) == 0: # highest frequent letter yield no results, keep trying until match
+            res = _check_word(key)
+            if res != None:
+                possible_decrpyt.append(res)
+        else:
+            break
+    if len(possible_decrpyt) == 0:
+        print('ERROR: Could Not crack decrpytion using Frequency Analysis\nTry Brute Force Method instead')
+        return None
+    return possible_decrpyt
+
+
+def shift_crack(ciphertext, method='brute_force', space=Standard, valid_percent=0.50):
     """
     Given a ciphertext, attempt to crack the cipher and return the plaintext
     when the shift value is unknown
@@ -64,22 +118,19 @@ def shift_crack(ciphertext, space=Standard):
 
     Inputs:
         ciphertext (str): the text to be decrypted
+        method (str): 'brute_force': test all possible shift values
+                      'frequency': use frquency analysis
     
     Output:
         decrypt (list): list of possible decrpyted texts
                         Each entry is of the form: {'Plaintext': x, 'Shift Value': y}
     """
-    possible_decrpyt = [] # may be possible to get more than one potential plaintext
-    length = len(space)
-    # Brute Force by checking every possible shift value
-    for ii in range(length):
-        poss = shift_decrypt(ciphertext, key=ii, space=space)
-        #print(poss)
-        if poss == None:
-            return None
-        
-        # check if the decrypted text is english
-        if check_word(poss):
-            possible_decrpyt.append({'Plaintext': poss, 'Shift Value': ii})
+    if method.lower() == 'brute_force':
+        return shift_crack_brute_force(ciphertext, space, valid_percent=valid_percent)
+    elif method.lower() == 'frequency':
+        return shift_crack_frequency(ciphertext, space, valid_percent=valid_percent)
+    else:
+        print(f'Unknown Method {method}\nAvailable opitions are:\n\t"brute_force"\n\t"frequency"')
     
-    return possible_decrpyt
+
+
