@@ -1,8 +1,42 @@
 # Helper util functions
 import enchant
 import string
+import numpy as np
 
 Dict = enchant.Dict("en_US")
+
+Punctuation_List = ['.', '?', '!', ',', ';', ':']
+def avail_languages():
+    """
+    See which languages are currently available
+    """
+    avail = enchant.list_languages()
+    print(f"Available languages: {avail}")
+    return avail
+
+def current_language():
+    """
+    See what language is being used
+    """
+    curr = Dict.tag
+    print(f"Current language is: {curr}")
+    return curr
+
+def set_language(lang):
+    """
+    Set the language to be used to check for words
+    Default is "en_US"
+
+    Input:
+        lang (str): language to be used
+    """
+    global Dict
+    if enchant.dict_exists(lang):
+        Dict = enchant.Dict(lang)
+        print(f"Language set to: {lang}")
+    else:
+        print(f"Invalid Language: {lang}")
+        exit(-1)
 
 def remove_punctuation(input):
     """
@@ -22,6 +56,13 @@ def remove_punctuation(input):
     
     return result
 
+def remove_trailing_punctuation(input):
+    if input == '':
+        return ''
+    if input[-1] in Punctuation_List:
+        return input[:-1]
+    return input
+
 def check_word(s, valid_percent=0.50):
     """
     Check that a string contains only english words
@@ -36,20 +77,23 @@ def check_word(s, valid_percent=0.50):
     """
     # remove all punctuation from the str and split so
     # each word in s is its own entry in s_list
-    s_clean = remove_punctuation(s)
-    s_list = s_clean.split(' ')
-    cutoff = int(len(s_list) * valid_percent)
+    #s_clean = remove_punctuation(s)
+    s_list = s.split(' ')
+    cutoff = len(s_list) * valid_percent
     valid_count = 0
     # check validity of each word in s
     for word in s_list:
+        word = remove_trailing_punctuation(word)
+
         # Invalid if leading/trailing white space
         if word == '':
             return False
         
+
         valid = Dict.check(word)
         if valid:
             valid_count += 1
-            
+
     if valid_count >= cutoff:
         return True
     return False
