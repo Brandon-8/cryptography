@@ -1,7 +1,7 @@
 # basic shift cipher function to encrypt, decrpyt given a shift value, and decrypt when the shift value is unknown
 # Note: uppercase is not perserved
 from keyspace import Standard
-from util import check_word, calc_char_frequency
+from util import check_text, calc_char_frequency
 
 def shift_encrypt(plaintext, key=3, space=Standard):
     """
@@ -55,7 +55,7 @@ def shift_decrypt(ciphertext, key=3, space=Standard):
         plaintext += space[(idx - key) % length]
     return plaintext
 
-def shift_crack_brute_force(ciphertext, space, valid_percent):
+def shift_crack_brute_force(ciphertext, space, valid_percent, one_result=False):
     possible_decrpyt = [] # may be possible to get more than one potential plaintext
     length = len(space)
     # Brute Force by checking every possible shift value
@@ -66,8 +66,11 @@ def shift_crack_brute_force(ciphertext, space, valid_percent):
             return None
         
         # check if the decrypted text is english
-        if check_word(poss, valid_percent=valid_percent):
-            possible_decrpyt.append({'Plaintext': poss, 'Shift Value': ii})
+        valid = check_text(poss)
+        res = {'Plaintext': poss, 'Shift Value': ii, 'Valid': valid}
+        if one_result and valid >= valid_percent:
+            return res
+        possible_decrpyt.append(res)  
     
     return possible_decrpyt
 
@@ -78,8 +81,9 @@ def shift_crack_frequency(ciphertext, space, valid_percent):
         poss = shift_decrypt(ciphertext, key=shift, space=space)
             
         # check if the decrypted text is english
-        if check_word(poss, valid_percent=valid_percent):
-            return {'Plaintext': poss, 'Shift Value': shift}
+        valid = check_text(poss, valid_percent=valid_percent)
+        if valid >= valid_percent:
+            return {'Plaintext': poss, 'Shift Value': shift, 'Valid': valid}
         return None
     
     freq = calc_char_frequency(ciphertext)
@@ -109,7 +113,7 @@ def shift_crack_frequency(ciphertext, space, valid_percent):
     return possible_decrpyt
 
 
-def shift_crack(ciphertext, method='brute_force', space=Standard, valid_percent=0.50):
+def shift_crack(ciphertext, method='brute_force', space=Standard, valid_percent=0.80, one_result=False):
     """
     Given a ciphertext, attempt to crack the cipher and return the plaintext
     when the shift value is unknown
@@ -126,11 +130,24 @@ def shift_crack(ciphertext, method='brute_force', space=Standard, valid_percent=
                         Each entry is of the form: {'Plaintext': x, 'Shift Value': y}
     """
     if method.lower() == 'brute_force':
-        return shift_crack_brute_force(ciphertext, space, valid_percent=valid_percent)
+        all_options = shift_crack_brute_force(ciphertext, space, valid_percent=valid_percent, one_result=one_result)
+        if type(all_options) == dict:
+            poss = [all_options]
+        else:
+            sorted_list = sorted(all_options, key=lambda x: x['Valid'], reverse=True)
+            poss = []
+            for d in sorted_list:
+                if d['Valid'] >= valid_percent:
+                    poss.append(d)
+                else:
+                    break
+
     elif method.lower() == 'frequency':
-        return shift_crack_frequency(ciphertext, space, valid_percent=valid_percent)
+        poss = shift_crack_frequency(ciphertext, space, valid_percent=valid_percent)
     else:
         print(f'Unknown Method {method}\nAvailable opitions are:\n\t"brute_force"\n\t"frequency"')
+        return None
     
+    return poss
 
 

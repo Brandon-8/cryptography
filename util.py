@@ -63,9 +63,12 @@ def remove_trailing_punctuation(input):
         return input[:-1]
     return input
 
-def check_word(s, valid_percent=0.50):
+def check_text(s, valid_percent=0.50):
     """
-    Check that a string contains only english words
+    Calculate the percentage of words in a text are English. Check percentage vs binary 
+    (all words are English vs at least one word is not English) to account for Proper Nouns 
+    not found in dict
+
 
     Inputs:
         s (str): a given string to test for english words
@@ -79,7 +82,7 @@ def check_word(s, valid_percent=0.50):
     # each word in s is its own entry in s_list
     #s_clean = remove_punctuation(s)
     s_list = s.split(' ')
-    cutoff = len(s_list) * valid_percent
+    #cutoff = len(s_list) * valid_percent
     valid_count = 0
     # check validity of each word in s
     for word in s_list:
@@ -94,9 +97,7 @@ def check_word(s, valid_percent=0.50):
         if valid:
             valid_count += 1
 
-    if valid_count >= cutoff:
-        return True
-    return False
+    return valid_count/len(s_list)
 
 def calc_char_frequency(s):
     freq = {}
