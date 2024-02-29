@@ -1,3 +1,3 @@
 # cryptography
 
-Basic Cryptography ciphers/functions based on class material (CS402)
+Basic Cryptography ciphers/functions for Educational Purposes only
